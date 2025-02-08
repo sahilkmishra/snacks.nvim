@@ -911,9 +911,9 @@ function M.sections.projects(opts)
     ret[#ret + 1] = {
       file = dir,
       icon = "directory",
-      header = getCountofCommentStrings("INFO|NOTE", dir) .. " 󰙎 ",
-      footer = getCountofCommentStrings("TODO|WARN|ERROR", dir)
-        .. " 󰄗 "
+      header = getCountofCommentStrings("TODO|WARN|ERROR", dir) .. " 󰄗 ",
+      footer = getCountofCommentStrings("INFO|NOTE", dir)
+        .. " 󰙎 "
         .. getCountofCommentStrings("DONE", dir)
         .. "  ",
 

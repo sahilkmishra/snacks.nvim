@@ -1,3 +1,5 @@
+[my setup](./docs/assets/Screenshot.png)
+
 # 🍿 `snacks.nvim`
 
 A collection of small QoL plugins for Neovim.
