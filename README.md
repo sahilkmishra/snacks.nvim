@@ -1,4 +1,4 @@
-[my setup](./docs/assets/Screenshot.png)
+![my setup](docs/assets/Screenshot.png)
 
 # 🍿 `snacks.nvim`
 
