@@ -899,11 +899,20 @@ function M.sections.projects(opts)
     end
   end
 
+  ---
+  local function getCountofCommentStrings(query, dir)
+    local command =
+      string.format('rg -c "' .. query .. ':" %s | cut -d":" -f2 | awk "{sum+=$1} END {print sum+0}"', dir)
+    return string.format("%4d", vim.fn.system(command))
+  end
+
   local ret = {} ---@type snacks.dashboard.Item[]
   for _, dir in ipairs(dirs) do
     ret[#ret + 1] = {
       file = dir,
       icon = "directory",
+      header = getCountofCommentStrings("INFO|NOTE", dir) .. "  ",
+      footer = getCountofCommentStrings("TODO|WARN|ERROR", dir) .. " 󰙎 ",
       action = function(self)
         if opts.action then
           return opts.action(dir)
