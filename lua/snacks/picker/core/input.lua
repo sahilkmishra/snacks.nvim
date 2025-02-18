@@ -6,7 +6,6 @@
 local M = {}
 M.__index = M
 
-local uv = vim.uv or vim.loop
 local ns = vim.api.nvim_create_namespace("snacks.picker.input")
 
 ---@param picker snacks.Picker
@@ -21,7 +20,6 @@ function M.new(picker)
     show = false,
     enter = false,
     height = 1,
-    text = picker.opts.live and self.filter.search or self.filter.pattern,
     ft = "regex",
     on_buf = function(win)
       -- HACK: this is needed to prevent Neovim from stopping insert mode,
@@ -31,6 +29,9 @@ function M.new(picker)
         vim.bo[buf].buftype = "nofile"
       end
       vim.fn.prompt_setprompt(win.buf, "")
+      vim.bo[win.buf].modified = false
+      local text = picker.opts.live and self.filter.search or self.filter.pattern
+      vim.api.nvim_buf_set_lines(win.buf, 0, -1, false, { text })
       vim.bo[win.buf].modified = false
     end,
     on_win = function()
@@ -142,7 +143,7 @@ function M:update()
   end
   local line = {} ---@type snacks.picker.Highlight[]
   if self.picker:is_active() then
-    line[#line + 1] = { M.spinner(), "SnacksPickerSpinner" }
+    line[#line + 1] = { Snacks.util.spinner(), "SnacksPickerSpinner" }
     line[#line + 1] = { " " }
   end
   local selected = #self.picker.list.selected
@@ -184,11 +185,6 @@ function M:set(pattern, search)
   self.win.opts.wo.statuscolumn = ""
   self:update()
   self.picker:update_titles()
-end
-
-function M.spinner()
-  local spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
-  return spinner[math.floor(uv.hrtime() / (1e6 * 80)) % #spinner + 1]
 end
 
 return M

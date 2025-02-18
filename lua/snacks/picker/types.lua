@@ -11,8 +11,8 @@
 ---@field diagnostics_buffer fun(opts?: snacks.picker.diagnostics.Config|{}): snacks.Picker
 ---@field explorer fun(opts?: snacks.picker.explorer.Config|{}): snacks.Picker
 ---@field files fun(opts?: snacks.picker.files.Config|{}): snacks.Picker
----@field git_branches fun(opts?: snacks.picker.Config|{}): snacks.Picker
----@field git_diff fun(opts?: snacks.picker.Config|{}): snacks.Picker
+---@field git_branches fun(opts?: snacks.picker.git.Config|{}): snacks.Picker
+---@field git_diff fun(opts?: snacks.picker.git.Config|{}): snacks.Picker
 ---@field git_files fun(opts?: snacks.picker.git.files.Config|{}): snacks.Picker
 ---@field git_grep fun(opts?: snacks.picker.git.grep.Config|{}): snacks.Picker
 ---@field git_log fun(opts?: snacks.picker.git.log.Config|{}): snacks.Picker
@@ -31,6 +31,7 @@
 ---@field lazy fun(opts?: snacks.picker.Config|{}): snacks.Picker
 ---@field lines fun(opts?: snacks.picker.lines.Config|{}): snacks.Picker
 ---@field loclist fun(opts?: snacks.picker.qf.Config|{}): snacks.Picker
+---@field lsp_config fun(opts?: snacks.picker.lsp.config.Config|{}): snacks.Picker
 ---@field lsp_declarations fun(opts?: snacks.picker.lsp.Config|{}): snacks.Picker
 ---@field lsp_definitions fun(opts?: snacks.picker.lsp.Config|{}): snacks.Picker
 ---@field lsp_implementations fun(opts?: snacks.picker.lsp.Config|{}): snacks.Picker
