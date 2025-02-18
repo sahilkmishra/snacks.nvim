@@ -900,9 +900,8 @@ function M.sections.projects(opts)
   end
 
   ---
-  local function getCountofCommentStrings(query, dir)
-    local command =
-      string.format('rg -c "' .. query .. ':" %s | cut -d":" -f2 | awk "{sum+=$1} END {print sum+0}"', dir)
+  local function getCountOfCommentStrings(query, dir)
+    local command = string.format('rg -c "%s:" %s | cut -d":" -f2 | awk \'{sum+=$1} END {print sum+0}\'', query, dir)
     return string.format("%3d", vim.fn.system(command))
   end
 
@@ -911,10 +910,10 @@ function M.sections.projects(opts)
     ret[#ret + 1] = {
       file = dir,
       icon = "directory",
-      header = getCountofCommentStrings("TODO|WARN|ERROR", dir) .. " 󰄗 ",
-      footer = getCountofCommentStrings("INFO|NOTE", dir)
+      header = getCountOfCommentStrings("TODO|WARN|ERROR", dir) .. " 󰄗 ",
+      footer = getCountOfCommentStrings("INFO|NOTE", dir)
         .. " 󰙎 "
-        .. getCountofCommentStrings("DONE", dir)
+        .. getCountOfCommentStrings("DONE", dir)
         .. "  ",
 
       action = function(self)
