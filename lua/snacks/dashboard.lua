@@ -895,9 +895,15 @@ function M.sections.projects(opts)
   end
 
   ---
-  local function getCountOfCommentStrings(query, dir)
+  ---
+  ---Counts all Comment Occurrences
+  ---@param query string '|' separated queries
+  ---@param dir string directory to search
+  ---@param space integer amount of whitespace to hold
+  ---@return string
+  local function getCountOfCommentStrings(query, dir, space)
     local command = string.format('rg -c "%s:" %s | cut -d":" -f2 | awk \'{sum+=$1} END {print sum+0}\'', query, dir)
-    return string.format("%3d", vim.fn.system(command))
+    return string.format("%" .. space .. "d", vim.fn.system(command))
   end
 
   local ret = {} ---@type snacks.dashboard.Item[]
@@ -905,10 +911,10 @@ function M.sections.projects(opts)
     ret[#ret + 1] = {
       file = dir,
       icon = "directory",
-      header = getCountOfCommentStrings("TODO|WARN|ERROR", dir) .. " 󰄗 ",
-      footer = getCountOfCommentStrings("INFO|NOTE", dir)
+      header = getCountOfCommentStrings("TODO|WARN|ERROR", dir, 3) .. " 󰄗 ",
+      footer = getCountOfCommentStrings("INFO|NOTE", dir, 3)
         .. " 󰙎 "
-        .. getCountOfCommentStrings("DONE", dir)
+        .. getCountOfCommentStrings("DONE", dir, 1)
         .. "  ",
 
       action = function(self)
