@@ -168,11 +168,11 @@ Snacks.picker.pick({source = "files", ...})
   ---@class snacks.picker.previewers.Config
   previewers = {
     diff = {
-      native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+      builtin = true, -- use Neovim for previewing diffs (true) or use an external tool (false)
       cmd = { "delta" }, -- example to show a diff with delta
     },
     git = {
-      native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+      builtin = true, -- use Neovim for previewing git output (true) or use git (false)
       args = {}, -- additional arguments passed to the git command. Useful to set pager options usin `-c ...`
     },
     file = {
@@ -207,11 +207,11 @@ Snacks.picker.pick({source = "files", ...})
         ["/"] = "toggle_focus",
         ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
         ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
-        ["<C-c>"] = { "close", mode = "i" },
+        ["<C-c>"] = { "cancel", mode = "i" },
         ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
         ["<CR>"] = { "confirm", mode = { "n", "i" } },
         ["<Down>"] = { "list_down", mode = { "i", "n" } },
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "i", "n" } },
         ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },
@@ -237,6 +237,13 @@ Snacks.picker.pick({source = "files", ...})
         ["<c-t>"] = { "tab", mode = { "n", "i" } },
         ["<c-u>"] = { "list_scroll_up", mode = { "i", "n" } },
         ["<c-v>"] = { "edit_vsplit", mode = { "i", "n" } },
+        ["<c-r>#"] = { "insert_alt", mode = "i" },
+        ["<c-r>%"] = { "insert_filename", mode = "i" },
+        ["<c-r><c-a>"] = { "insert_cWORD", mode = "i" },
+        ["<c-r><c-f>"] = { "insert_file", mode = "i" },
+        ["<c-r><c-l>"] = { "insert_line", mode = "i" },
+        ["<c-r><c-p>"] = { "insert_file_full", mode = "i" },
+        ["<c-r><c-w>"] = { "insert_cword", mode = "i" },
         ["<c-w>H"] = "layout_left",
         ["<c-w>J"] = "layout_bottom",
         ["<c-w>K"] = "layout_top",
@@ -259,7 +266,7 @@ Snacks.picker.pick({source = "files", ...})
         ["<2-LeftMouse>"] = "confirm",
         ["<CR>"] = "confirm",
         ["<Down>"] = "list_down",
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["<S-CR>"] = { { "pick_win", "jump" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "n", "x" } },
         ["<Tab>"] = { "select_and_next", mode = { "n", "x" } },
@@ -307,11 +314,9 @@ Snacks.picker.pick({source = "files", ...})
     -- preview window
     preview = {
       keys = {
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["q"] = "close",
         ["i"] = "focus_input",
-        ["<ScrollWheelDown>"] = "list_scroll_wheel_down",
-        ["<ScrollWheelUp>"] = "list_scroll_wheel_up",
         ["<a-w>"] = "cycle_win",
       },
     },
@@ -607,6 +612,11 @@ Snacks.picker.pick({source = "files", ...})
 ---@field reg? string
 ---@field field? string
 ---@field notify? boolean
+```
+
+```lua
+---@class snacks.picker.insert.Action: snacks.picker.Action
+---@field expr string
 ```
 
 ```lua
@@ -1056,8 +1066,10 @@ Neovim commands
 ```
 
 ```lua
----@type snacks.picker.git.Config
+---@class snacks.picker.git.branches.Config: snacks.picker.git.Config
+---@field all? boolean show all branches, including remote
 {
+  all = false,
   finder = "git_branches",
   format = "git_branch",
   preview = "git_log",
@@ -1094,7 +1106,7 @@ Neovim commands
 {
   finder = "git_diff",
   format = "file",
-  preview = "preview",
+  preview = "diff",
 }
 ```
 
@@ -1302,6 +1314,7 @@ Git log
 ---@type snacks.picker.grep.Config|{}
 {
   finder = "grep",
+  regex = false,
   format = "file",
   search = function(picker)
     return picker:word()
@@ -2359,6 +2372,12 @@ local M = {}
 Snacks.picker.actions.bufdelete(picker)
 ```
 
+### `Snacks.picker.actions.cancel()`
+
+```lua
+Snacks.picker.actions.cancel(picker)
+```
+
 ### `Snacks.picker.actions.cd()`
 
 ```lua
@@ -2447,6 +2466,12 @@ Snacks.picker.actions.history_back(picker)
 
 ```lua
 Snacks.picker.actions.history_forward(picker)
+```
+
+### `Snacks.picker.actions.insert()`
+
+```lua
+Snacks.picker.actions.insert(picker, _, action)
 ```
 
 ### `Snacks.picker.actions.inspect()`

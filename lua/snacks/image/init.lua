@@ -6,10 +6,11 @@
 ---@field buf snacks.image.buf
 ---@field doc snacks.image.doc
 ---@field convert snacks.image.convert
+---@field inline snacks.image.inline
 local M = setmetatable({}, {
   ---@param M snacks.image
   __index = function(M, k)
-    if vim.tbl_contains({ "terminal", "image", "placement", "util", "doc", "buf", "convert" }, k) then
+    if vim.tbl_contains({ "terminal", "image", "placement", "util", "doc", "buf", "convert", "inline" }, k) then
       M[k] = require("snacks.image." .. k)
     end
     return rawget(M, k)
@@ -24,6 +25,7 @@ M.meta = {
 ---@alias snacks.image.Size {width: number, height: number}
 ---@alias snacks.image.Pos {[1]: number, [2]: number}
 ---@alias snacks.image.Loc snacks.image.Pos|snacks.image.Size|{zindex?: number}
+---@alias snacks.image.Type "image"|"math"|"chart"
 
 ---@class snacks.image.Env
 ---@field name string
@@ -67,7 +69,6 @@ local defaults = {
   doc = {
     -- enable image viewer for documents
     -- a treesitter parser must be available for the enabled languages.
-    -- supported language injections: markdown, html
     enabled = true,
     -- render the image inline in the buffer
     -- if your env doesn't support unicode placeholders, this will be disabled
@@ -78,6 +79,14 @@ local defaults = {
     float = true,
     max_width = 80,
     max_height = 40,
+    -- Set to `true`, to conceal the image text when rendering inline.
+    -- (experimental)
+    ---@param lang string tree-sitter language
+    ---@param type snacks.image.Type image type
+    conceal = function(lang, type)
+      -- only conceal math expressions
+      return type == "math"
+    end,
   },
   img_dirs = { "img", "images", "assets", "static", "public", "media", "attachments" },
   -- window options applied to windows displaying image buffers
@@ -100,6 +109,13 @@ local defaults = {
     placement = false,
   },
   env = {},
+  -- icons used to show where an inline image is located that is
+  -- rendered below the text.
+  icons = {
+    math = "󰪚 ",
+    chart = "󰄧 ",
+    image = " ",
+  },
   ---@class snacks.image.convert.Config
   convert = {
     notify = true, -- show a notification on error
@@ -110,9 +126,40 @@ local defaults = {
     end,
     ---@type table<string,snacks.image.args>
     magick = {
-      default = { "{src}[0]", "-scale", "1920x1080>" },
-      math = { "-density", 600, "{src}[0]", "-trim" },
-      pdf = { "-density", 300, "{src}[0]", "-background", "white", "-alpha", "remove", "-trim" },
+      default = { "{src}[0]", "-scale", "1920x1080>" }, -- default for raster images
+      vector = { "-density", 192, "{src}[0]" }, -- used by vector images like svg
+      math = { "-density", 192, "{src}[0]", "-trim" },
+      pdf = { "-density", 192, "{src}[0]", "-background", "white", "-alpha", "remove", "-trim" },
+    },
+  },
+  math = {
+    enabled = true, -- enable math expression rendering
+    -- in the templates below, `${header}` comes from any section in your document,
+    -- between a start/end header comment. Comment syntax is language-specific.
+    -- * start comment: `// snacks: header start`
+    -- * end comment:   `// snacks: header end`
+    typst = {
+      tpl = [[
+        #set page(width: auto, height: auto, margin: (x: 2pt, y: 2pt))
+        #show math.equation.where(block: false): set text(top-edge: "bounds", bottom-edge: "bounds")
+        #set text(size: 12pt, fill: rgb("${color}"))
+        ${header}
+        ${content}]],
+    },
+    latex = {
+      font_size = "Large", -- see https://www.sascha-frank.com/latex-font-size.html
+      -- for latex documents, the doc packages are included automatically,
+      -- but you can add more packages here. Useful for markdown documents.
+      packages = { "amsmath", "amssymb", "amsfonts", "amscd", "mathtools" },
+      tpl = [[
+        \documentclass[preview,border=0pt,varwidth,12pt]{standalone}
+        \usepackage{${packages}}
+        \begin{document}
+        ${header}
+        { \${font_size} \selectfont
+          \color[HTML]{${color}}
+        ${content}}
+        \end{document}]],
     },
   },
 }
@@ -130,11 +177,15 @@ Snacks.config.style("snacks_image", {
 
 Snacks.util.set_hl({
   Spinner = "Special",
+  Anchor = "Special",
   Loading = "NonText",
+  Math = { fg = Snacks.util.color({ "@markup.math.latex", "Special", "Normal" }) },
 }, { prefix = "SnacksImage", default = true })
 
 ---@class snacks.image.Opts
 ---@field pos? snacks.image.Pos (row, col) (1,0)-indexed. defaults to the top-left corner
+---@field range? Range4
+---@field conceal? boolean
 ---@field inline? boolean render the image inline in the buffer
 ---@field width? number
 ---@field min_width? number
@@ -144,6 +195,8 @@ Snacks.util.set_hl({
 ---@field max_height? number
 ---@field on_update? fun(placement: snacks.image.Placement)
 ---@field on_update_pre? fun(placement: snacks.image.Placement)
+---@field type? snacks.image.Type
+---@field auto_resize? boolean
 
 local did_setup = false
 
@@ -185,6 +238,22 @@ function M.setup(ev)
   end
   did_setup = true
   local group = vim.api.nvim_create_augroup("snacks.image", { clear = true })
+
+  vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
+    group = group,
+    callback = function(e)
+      vim.schedule(function()
+        Snacks.image.placement.clean(e.buf)
+      end)
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "ExitPre" }, {
+    group = group,
+    once = true,
+    callback = function()
+      Snacks.image.placement.clean()
+    end,
+  })
 
   if M.config.formats and #M.config.formats > 0 then
     vim.api.nvim_create_autocmd("BufReadCmd", {
@@ -262,13 +331,9 @@ function M.health()
     )
   )
 
-  for _, lang in ipairs(M.langs()) do
-    local ok, parser = pcall(vim.treesitter.get_string_parser, "", lang)
-    if ok and parser then
-      Snacks.health.ok("Image rendering for `" .. lang .. "` is available")
-    else
-      Snacks.health.warn("Image rendering for `" .. lang .. "` is not available")
-    end
+  local langs, _, missing = Snacks.health.has_lang(M.langs())
+  if missing > 0 then
+    Snacks.health.warn("Image rendering in docs with missing treesitter parsers won't work")
   end
 
   if Snacks.health.have_tool("gs") then
@@ -278,9 +343,13 @@ function M.health()
   end
 
   if Snacks.health.have_tool({ "tectonic", "pdflatex" }) then
-    Snacks.health.ok("LaTeX math equations are supported")
+    if langs.latex then
+      Snacks.health.ok("LaTeX math equations are supported")
+    else
+      Snacks.health.warn("The `latex` treesitter parser is required to render LaTeX math expressions")
+    end
   else
-    Snacks.health.warn("`tectonic` or `pdflatex` is required to render LaTeX math equations")
+    Snacks.health.warn("`tectonic` or `pdflatex` is required to render LaTeX math expressions")
   end
 
   if Snacks.health.have_tool("mmdc") then

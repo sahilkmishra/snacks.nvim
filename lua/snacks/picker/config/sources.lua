@@ -210,8 +210,10 @@ M.files = {
 ---@class snacks.picker.git.Config: snacks.picker.Config
 ---@field args? string[] additional arguments to pass to `git ls-files`
 
----@type snacks.picker.git.Config
+---@class snacks.picker.git.branches.Config: snacks.picker.git.Config
+---@field all? boolean show all branches, including remote
 M.git_branches = {
+  all = false,
   finder = "git_branches",
   format = "git_branch",
   preview = "git_log",
@@ -326,7 +328,7 @@ M.git_status = {
 M.git_diff = {
   finder = "git_diff",
   format = "file",
-  preview = "preview",
+  preview = "diff",
 }
 
 ---@class snacks.picker.grep.Config: snacks.picker.proc.Config
@@ -365,6 +367,7 @@ M.grep_buffers = {
 ---@type snacks.picker.grep.Config|{}
 M.grep_word = {
   finder = "grep",
+  regex = false,
   format = "file",
   search = function(picker)
     return picker:word()

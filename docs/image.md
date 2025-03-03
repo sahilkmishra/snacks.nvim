@@ -95,7 +95,6 @@ In case of issues, make sure to run `:checkhealth snacks`.
   doc = {
     -- enable image viewer for documents
     -- a treesitter parser must be available for the enabled languages.
-    -- supported language injections: markdown, html
     enabled = true,
     -- render the image inline in the buffer
     -- if your env doesn't support unicode placeholders, this will be disabled
@@ -106,6 +105,14 @@ In case of issues, make sure to run `:checkhealth snacks`.
     float = true,
     max_width = 80,
     max_height = 40,
+    -- Set to `true`, to conceal the image text when rendering inline.
+    -- (experimental)
+    ---@param lang string tree-sitter language
+    ---@param type snacks.image.Type image type
+    conceal = function(lang, type)
+      -- only conceal math expressions
+      return type == "math"
+    end,
   },
   img_dirs = { "img", "images", "assets", "static", "public", "media", "attachments" },
   -- window options applied to windows displaying image buffers
@@ -128,6 +135,13 @@ In case of issues, make sure to run `:checkhealth snacks`.
     placement = false,
   },
   env = {},
+  -- icons used to show where an inline image is located that is
+  -- rendered below the text.
+  icons = {
+    math = "󰪚 ",
+    chart = "󰄧 ",
+    image = " ",
+  },
   ---@class snacks.image.convert.Config
   convert = {
     notify = true, -- show a notification on error
@@ -138,9 +152,40 @@ In case of issues, make sure to run `:checkhealth snacks`.
     end,
     ---@type table<string,snacks.image.args>
     magick = {
-      default = { "{src}[0]", "-scale", "1920x1080>" },
-      math = { "-density", 600, "{src}[0]", "-trim" },
-      pdf = { "-density", 300, "{src}[0]", "-background", "white", "-alpha", "remove", "-trim" },
+      default = { "{src}[0]", "-scale", "1920x1080>" }, -- default for raster images
+      vector = { "-density", 192, "{src}[0]" }, -- used by vector images like svg
+      math = { "-density", 192, "{src}[0]", "-trim" },
+      pdf = { "-density", 192, "{src}[0]", "-background", "white", "-alpha", "remove", "-trim" },
+    },
+  },
+  math = {
+    enabled = true, -- enable math expression rendering
+    -- in the templates below, `${header}` comes from any section in your document,
+    -- between a start/end header comment. Comment syntax is language-specific.
+    -- * start comment: `// snacks: header start`
+    -- * end comment:   `// snacks: header end`
+    typst = {
+      tpl = [[
+        #set page(width: auto, height: auto, margin: (x: 2pt, y: 2pt))
+        #show math.equation.where(block: false): set text(top-edge: "bounds", bottom-edge: "bounds")
+        #set text(size: 12pt, fill: rgb("${color}"))
+        ${header}
+        ${content}]],
+    },
+    latex = {
+      font_size = "Large", -- see https://www.sascha-frank.com/latex-font-size.html
+      -- for latex documents, the doc packages are included automatically,
+      -- but you can add more packages here. Useful for markdown documents.
+      packages = { "amsmath", "amssymb", "amsfonts", "amscd", "mathtools" },
+      tpl = [[
+        \documentclass[preview,border=0pt,varwidth,12pt]{standalone}
+        \usepackage{${packages}}
+        \begin{document}
+        ${header}
+        { \${font_size} \selectfont
+          \color[HTML]{${color}}
+        ${content}}
+        \end{document}]],
     },
   },
 }
@@ -171,6 +216,7 @@ docs for more information on how to customize these styles
 ---@alias snacks.image.Size {width: number, height: number}
 ---@alias snacks.image.Pos {[1]: number, [2]: number}
 ---@alias snacks.image.Loc snacks.image.Pos|snacks.image.Size|{zindex?: number}
+---@alias snacks.image.Type "image"|"math"|"chart"
 ```
 
 ```lua
@@ -188,6 +234,8 @@ docs for more information on how to customize these styles
 ```lua
 ---@class snacks.image.Opts
 ---@field pos? snacks.image.Pos (row, col) (1,0)-indexed. defaults to the top-left corner
+---@field range? Range4
+---@field conceal? boolean
 ---@field inline? boolean render the image inline in the buffer
 ---@field width? number
 ---@field min_width? number
@@ -197,6 +245,8 @@ docs for more information on how to customize these styles
 ---@field max_height? number
 ---@field on_update? fun(placement: snacks.image.Placement)
 ---@field on_update_pre? fun(placement: snacks.image.Placement)
+---@field type? snacks.image.Type
+---@field auto_resize? boolean
 ```
 
 ## 📦 Module
@@ -210,6 +260,7 @@ docs for more information on how to customize these styles
 ---@field buf snacks.image.buf
 ---@field doc snacks.image.doc
 ---@field convert snacks.image.convert
+---@field inline snacks.image.inline
 Snacks.image = {}
 ```
 

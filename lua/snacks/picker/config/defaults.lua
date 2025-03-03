@@ -164,11 +164,11 @@ local defaults = {
   ---@class snacks.picker.previewers.Config
   previewers = {
     diff = {
-      native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+      builtin = true, -- use Neovim for previewing diffs (true) or use an external tool (false)
       cmd = { "delta" }, -- example to show a diff with delta
     },
     git = {
-      native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+      builtin = true, -- use Neovim for previewing git output (true) or use git (false)
       args = {}, -- additional arguments passed to the git command. Useful to set pager options usin `-c ...`
     },
     file = {
@@ -203,11 +203,11 @@ local defaults = {
         ["/"] = "toggle_focus",
         ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
         ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
-        ["<C-c>"] = { "close", mode = "i" },
+        ["<C-c>"] = { "cancel", mode = "i" },
         ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
         ["<CR>"] = { "confirm", mode = { "n", "i" } },
         ["<Down>"] = { "list_down", mode = { "i", "n" } },
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "i", "n" } },
         ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },
@@ -233,6 +233,13 @@ local defaults = {
         ["<c-t>"] = { "tab", mode = { "n", "i" } },
         ["<c-u>"] = { "list_scroll_up", mode = { "i", "n" } },
         ["<c-v>"] = { "edit_vsplit", mode = { "i", "n" } },
+        ["<c-r>#"] = { "insert_alt", mode = "i" },
+        ["<c-r>%"] = { "insert_filename", mode = "i" },
+        ["<c-r><c-a>"] = { "insert_cWORD", mode = "i" },
+        ["<c-r><c-f>"] = { "insert_file", mode = "i" },
+        ["<c-r><c-l>"] = { "insert_line", mode = "i" },
+        ["<c-r><c-p>"] = { "insert_file_full", mode = "i" },
+        ["<c-r><c-w>"] = { "insert_cword", mode = "i" },
         ["<c-w>H"] = "layout_left",
         ["<c-w>J"] = "layout_bottom",
         ["<c-w>K"] = "layout_top",
@@ -255,7 +262,7 @@ local defaults = {
         ["<2-LeftMouse>"] = "confirm",
         ["<CR>"] = "confirm",
         ["<Down>"] = "list_down",
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["<S-CR>"] = { { "pick_win", "jump" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "n", "x" } },
         ["<Tab>"] = { "select_and_next", mode = { "n", "x" } },
@@ -303,11 +310,9 @@ local defaults = {
     -- preview window
     preview = {
       keys = {
-        ["<Esc>"] = "close",
+        ["<Esc>"] = "cancel",
         ["q"] = "close",
         ["i"] = "focus_input",
-        ["<ScrollWheelDown>"] = "list_scroll_wheel_down",
-        ["<ScrollWheelUp>"] = "list_scroll_wheel_up",
         ["<a-w>"] = "cycle_win",
       },
     },

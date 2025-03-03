@@ -51,6 +51,19 @@ vim.api.nvim_create_autocmd("VimResized", {
   end,
 })
 
+-- HACK: ghostty doesn't like it when sending images too fast,
+-- after Neovim startup, so we delay the first image
+local queue = {} ---@type string[]?
+vim.defer_fn(
+  vim.schedule_wrap(function()
+    for _, data in ipairs(queue or {}) do
+      io.stdout:write(data)
+    end
+    queue = nil
+  end),
+  100
+)
+
 function M.size()
   if size then
     return size
@@ -172,12 +185,20 @@ function M.request(opts)
   if Snacks.image.config.debug.request and opts.m ~= 1 then
     Snacks.debug.inspect(opts)
   end
-  io.stdout:write(data)
+  M.write(data)
 end
 
 ---@param pos {[1]: number, [2]: number}
 function M.set_cursor(pos)
-  io.stdout:write("\27[" .. pos[1] .. ";" .. (pos[2] + 1) .. "H")
+  M.write("\27[" .. pos[1] .. ";" .. (pos[2] + 1) .. "H")
+end
+
+function M.write(data)
+  if queue then
+    table.insert(queue, data)
+  else
+    io.stdout:write(data)
+  end
 end
 
 return M
